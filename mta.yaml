@@ -1,0 +1,98 @@
+_schema-version: "3.2"
+ID: privatelink-proxy
+version: 0.0.1
+modules:
+- name: privatelink-proxy-approuter
+  type: approuter.nodejs
+  path: approuter/
+  requires:
+  - name: privatelink-proxy_html_repo_runtime
+  - name: uaa_privatelink-proxy
+  - name: pl_privatelink-proxy
+  - name: dest_privatelink-proxy
+  - name: portal_resources_approuter-privatelink-proxy
+  parameters:
+    disk-quota: 1024M
+    memory: 512M
+- name: html5deployer
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: privatelink-proxy_html5_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - plinkfioriuiui.zip
+      name: plinkfioriuiui
+      target-path: resources/
+- name: plinkfioriuiui
+  type: html5
+  path: ui
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: flp
+  type: com.sap.application.content
+  path: flp
+  requires:
+  - name: privatelink-proxy_html5_repo_host
+  - name: portal_resources_approuter-privatelink-proxy
+    parameters:
+      content-target: true
+      service-key:
+        config:
+          content-endpoint: developer
+        name: content-deploy-key
+  - name: uaa_privatelink-proxy
+resources:
+- name: privatelink-proxy_html_repo_runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
+- name: privatelink-proxy_html5_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-host
+- name: uaa_privatelink-proxy
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: privatelink-proxy-xsuaa-service
+    service-plan: application
+- name: pl_privatelink-proxy
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: privatelink
+    service-name: tfe-cal-s4-privatelink
+    service-plan: standard
+- name: dest_privatelink-proxy
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: false
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+    service: destination
+    service-plan: lite
+- name: portal_resources_approuter-privatelink-proxy
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: portal
+    service-plan: standard
